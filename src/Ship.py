@@ -125,6 +125,37 @@ class Ship:
                 "Z {},{}".format(pts[11][0], pts[11][1])
         return svg_str
 
+    def get_ship_data(self):
+        pts = [
+            [[-0.4], [-0.5]],
+            [[-0.5], [0.0]],
+            [[-0.5], [0.2]],
+            [[-0.1], [0.5]],
+            [[0.1], [0.5]],
+            [[0.5], [0.2]],
+            [[0.5], [0.0]],
+            [[0.4], [-0.5]],
+            [[-0.4], [-0.5]]
+        ]
+
+        rot_deg = math.degrees(math.acos(self.direction[1] / np.linalg.norm(self.direction)))
+        scale = np.array([[self.width], [self.length]])
+        for i,_ in enumerate(pts):
+            pts[i] = np.multiply(scale, np.array(pts[i]))
+            pts[i] = (rotate(pts[i], rot_deg) + self.position).getA1()
+        return np.array(pts)
+
+    def get_path_data(self):
+        out = np.array([])
+        if not self.path:
+            return out
+
+        for i in np.linspace(0, len(self.path), num=20):
+            out.append(self.path[i][0])
+        print(out)
+        return out
+
+
     def get_path(self):
         if not self.path:
             return ""
