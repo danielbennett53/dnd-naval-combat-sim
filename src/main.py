@@ -19,23 +19,13 @@ app = dash.Dash(__name__)
 starttime = datetime.datetime.now()
 
 ships = {
-    "A": (Sprinter([0,0]), "Green"),
-    "B": (Sprinter([20, 40]), "Blue"),
-    "C": (Sprinter([-20, 75]), "Cyan"),
-    "D": (Galleon([-50, -80]), "Blue"),
+    "A": {'ship': Sprinter([0,0]), 'linecolor': "DarkGreen", 'fillcolor': 'LightGreen'},
+    "B": {'ship': Sprinter([20,40]), 'linecolor': "DarkBlue", 'fillcolor': 'LightBlue'},
+    "C": {'ship': Sprinter([-20,75]), 'linecolor': "DarkCyan", 'fillcolor': 'LightCyan'},
+    "D": {'ship': Sprinter([-50,-80]), 'linecolor': "Red", 'fillcolor': 'Pink'},
 }
 
 inputs = dict()
-
-# fig = go.Figure(
-#     layout=go.Layout(
-#         yaxis=dict(
-#             scaleanchor="x",
-#             scaleratio=1,
-#             range=[-300, 300],
-#         ),
-#     ),
-# )
 
 fig = go.Figure(go.Scatter(
     fill = 'toself',
@@ -53,12 +43,12 @@ fig.update_layout(
 for key, value in ships.items():
     fig.add_trace(go.Scatter(
         name=key + '-ship',
-        x = value[0].get_ship_data()[:,0],
-        y = value[0].get_ship_data()[:,1],
+        x = value['ship'].get_ship_data()[:,0],
+        y = value['ship'].get_ship_data()[:,1],
         fill='toself',
         mode='lines',
-        line_color="Dark" + value[1],
-        fillcolor="Light" + value[1],
+        line_color=value['linecolor'],
+        fillcolor=value['fillcolor'],
     ))
 
     fig.add_trace(go.Scatter(
@@ -67,26 +57,11 @@ for key, value in ships.items():
         y = None,
         fill='toself',
         mode='lines',
-        line_color="Dark" + value[1],
+        line_color=value['linecolor'],
     ))
 
-# for key, value in ships.items():
-#     fig.add_shape(
-#         name=key + "-ship",
-#         type="path",
-#         path=value[0].get_ship(),
-#         line_color="Dark" + value[1],
-#         fillcolor="Light" + value[1],
-#     )
+    inputs[key] = {'steer': 0, 'thrust': 0, 'roll': 0}
 
-#     fig.add_shape(
-#         name=key + "-path",
-#         type="path",
-#         path=value[0].get_path(),
-#         line_color="Dark" + value[1],
-#     )
-
-#     inputs[key] = {'thrust': 0, 'steer': 0, 'roll':0}
 
 def create_ship_controls(name, color):
     return html.Div(
@@ -100,7 +75,7 @@ def create_ship_controls(name, color):
             html.H5(name, style={"text-align": "center"}),
             dcc.Slider(
                 className="slider-pad",
-                id={"type": "input", "ship": name, "cntrl": "thrust", "last": 0},
+                id={"type": "input", "ship": name, "control": "thrust"},
                 min=-1.0,
                 max=1.0,
                 step=0.05,
@@ -114,7 +89,7 @@ def create_ship_controls(name, color):
             }),
             dcc.Slider(
                 className="slider-pad",
-                id={"type": "input", "ship": name, "cntrl": "steer", "last": 0},
+                id={"type": "input", "ship": name, "control": "steer"},
                 min=-1.0,
                 max=1.0,
                 step=0.05,
@@ -138,7 +113,7 @@ def create_ship_controls(name, color):
                     ),
                     dcc.Input(
                         className="three columns",
-                        id={"type": "input", "ship": name, "cntrl": "roll", "last": 0},
+                        id={"type": "input", "ship": name, "control": "roll"},
                         type="number",
                     ),
                 ]
@@ -177,6 +152,15 @@ def create_ship_controls(name, color):
                     ),
                 ]
             ),
+            html.Div(
+                id={'ship': name, 'type': 'dummy', 'control': 'thrust'},
+                hidden=True, children=[]),
+            html.Div(
+                id={'ship': name, 'type': 'dummy', 'control': 'steer'},
+                hidden=True, children=[]),
+            html.Div(
+                id={'ship': name, 'type': 'dummy', 'control': 'roll'},
+                hidden=True, children=[]),
         ]
     )
 
@@ -188,7 +172,7 @@ def get_layout():
             html.Div(
                 className="three columns",
                 style={"max-height": "100vh", "overflow-y": "auto"},
-                children=[create_ship_controls(k, 'Light' + v[1]) for k, v in ships.items()]
+                children=[create_ship_controls(k, v['fillcolor']) for k, v in ships.items()]
             ),
             html.Div(
             className="nine columns",
@@ -203,19 +187,24 @@ def get_layout():
                     },
                     id='plot',
                     figure=fig,
-                    # animate=True,
-                    # animation_options = dict(
-                    #     frame={"redraw": True},
-                    # )
+                    animate=True,
+                    animation_options = dict(
+                        frame={"redraw": True},
+                    )
                 ),
                 html.Button(
                     "Start Round",
                     id="start",
                     n_clicks=0,),
             ]),
+            # dcc.Interval(
+            #     id='short-interval',
+            #     interval=500,
+            #     n_intervals=0,
+            # ),
             dcc.Interval(
                 id='long-interval',
-                interval=500,
+                interval=2000,
                 n_intervals=0,
             ),
         ]
@@ -224,15 +213,40 @@ def get_layout():
 app.layout = get_layout
 motion_in_progress = False
 
-# @app.callback(Output({'type': 'input', 'ship': MATCH, 'cntrl': MATCH, 'last': MATCH}, 'id'),
-#               [Input({'type': 'input', 'ship': MATCH, 'cntrl': MATCH, 'last': MATCH}, 'value')],
-#               [State({'type': 'input', 'ship': MATCH, 'cntrl': MATCH, 'last': MATCH}, 'id')])
-# def update_inputs(value, info):
-#     global inputs
-#     out_info = info
-#     inputs[info['ship']][info['cntrl']] = value
-#     out_info['last'] = value
-#     return out_info
+@app.callback(Output({'type': 'dummy', 'ship': MATCH, 'control': MATCH}, 'children'),
+              [Input({'type': 'input', 'ship': MATCH, 'control': MATCH}, 'value')],
+              [State({'type': 'input', 'ship': MATCH, 'control': MATCH}, 'id')])
+def update_inputs(value, info):
+    global inputs
+    changed_ids = '\n'.join([p['prop_id'] for p in dash.callback_context.triggered])
+    inputs[info['ship']][info['control']] = value
+    return []
+
+
+@app.callback([Output('plot', 'figure'),
+               Output({'type': 'input', 'ship': ALL, 'control': ALL}, 'value')],
+              [Input('long-interval', 'n_intervals')],
+              [State({'type': 'input', 'ship': ALL, 'control': ALL}, 'id')])
+def update_plot(_, info):
+    global inputs, fig
+    changed_ids = '\n'.join([p['prop_id'] for p in dash.callback_context.triggered])
+    out = []
+
+    for i in info:
+        out.append(inputs[i['ship']][i['control']])
+
+    for s in ships.keys():
+        ships[s]['ship'].set_motion(inputs[s]['thrust'], inputs[s]['steer'])
+        fig.update_traces(
+            selector={'name': s + '-ship'},
+            x = ships[s]['ship'].get_ship_data()[:,0],
+            y = ships[s]['ship'].get_ship_data()[:,1])
+        fig.update_traces(
+            selector={'name': s + '-path'},
+            x = ships[s]['ship'].get_path_data()[:,0],
+            y = ships[s]['ship'].get_path_data()[:,1])
+
+    return fig, out
 
 
 # @app.callback([Output('plot', 'figure'),
@@ -243,47 +257,46 @@ motion_in_progress = False
 #                State({'type': 'input', 'ship': ALL, 'cntrl': ALL, 'last': ALL}, 'id')])
 # def update_plot(n_intervals, n_clicks, controls, ids):
 #     global fig, motion_in_progress, inputs
+    # # Collect changed controls in single string for easier parsing
+    # changed_ids = '\n'.join([p['prop_id'] for p in dash.callback_context.triggered])
 
-#     # Collect changed controls in single string for easier parsing
-#     changed_ids = '\n'.join([p['prop_id'] for p in dash.callback_context.triggered])
+    # # If motion stops, clear inputs
+    # if motion_in_progress and all([v[0].finished() for v in ships.values()]):
+    #     motion_in_progress = False
+    #     for key in inputs.keys():
+    #         inputs[key] = {'thrust': 0, 'steer': 0, 'roll': 0}
 
-#     # If motion stops, clear inputs
-#     if motion_in_progress and all([v[0].finished() for v in ships.values()]):
-#         motion_in_progress = False
-#         for key in inputs.keys():
-#             inputs[key] = {'thrust': 0, 'steer': 0, 'roll': 0}
+    # # Apply inputs to sliders
+    # out_vals = []
+    # for i in ids:
+    #     out_vals.append(inputs[i['ship']][i['cntrl']])
 
-#     # Apply inputs to sliders
-#     out_vals = []
-#     for i in ids:
-#         out_vals.append(inputs[i['ship']][i['cntrl']])
+    # if 'start' in changed_ids:
+    #     for v in ships.values():
+    #         v[0].start_movement(25)
+    #         motion_in_progress = True
 
-#     if 'start' in changed_ids:
-#         for v in ships.values():
-#             v[0].start_movement(25)
-#             motion_in_progress = True
+    # # Don't output figure unless triggered by interval
+    # if 'long-interval' not in changed_ids:
+    #     raise PreventUpdate
 
-#     # Don't output figure unless triggered by interval
-#     if 'long-interval' not in changed_ids:
-#         raise PreventUpdate
+    # if not all([v[0].finished() for v in ships.values()]):
+    #     for k, v in ships.items():
+    #         v[0].update()
+    #         fig.update_shapes(selector={'name': k + '-ship'}, path=v[0].get_ship())
+    #     return fig, out_vals
+    # else:
+    #     # Clear inputs if motion just finished
+    #     if motion_in_progress:
+    #         motion_in_progress = False
+    #         for ship, i in inputs:
+    #             for cntrl, _ in i:
+    #                 inputs[ship][cntrl] = 0
 
-#     if not all([v[0].finished() for v in ships.values()]):
-#         for k, v in ships.items():
-#             v[0].update()
-#             fig.update_shapes(selector={'name': k + '-ship'}, path=v[0].get_ship())
-#         return fig, out_vals
-#     else:
-#         # Clear inputs if motion just finished
-#         if motion_in_progress:
-#             motion_in_progress = False
-#             for ship, i in inputs:
-#                 for cntrl, _ in i:
-#                     inputs[ship][cntrl] = 0
+    #     for k, v in ships.items():
+    #         v[0].set_motion(inputs[k]['thrust'], inputs[k]['steer'])
+    #         fig.update_shapes(selector={"name": k + '-path'}, path=v[0].get_path())
 
-#         for k, v in ships.items():
-#             v[0].set_motion(inputs[k]['thrust'], inputs[k]['steer'])
-#             fig.update_shapes(selector={"name": k + '-path'}, path=v[0].get_path())
-
-#     return fig, out_vals
+    return fig, out_vals
 
 app.run_server(debug=True, port=8050, host='0.0.0.0')

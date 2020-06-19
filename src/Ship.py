@@ -149,10 +149,9 @@ class Ship:
         out = np.array([])
         if not self.path:
             return out
-
-        for i in np.linspace(0, len(self.path), num=20):
-            out.append(self.path[i][0])
-        print(out)
+        out = self.path[0][0]
+        for i in np.arange(0, len(self.path), 20):
+            out = np.hstack((out, self.path[i][0]))
         return out
 
 
