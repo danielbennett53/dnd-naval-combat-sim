@@ -1,13 +1,42 @@
 import asyncio
 import websockets
 
-async def hello(websocket, path):
-    name = await websocket.recv()
-    print("received {}".format(name))
+clients = set()
+counter = 0
 
-    await websocket.send("hello {}".format(name))
+async def update():
+    global counter
+    while True:
+        if clients:
+            for c in clients:
+                await c.send("{}".format(counter))
 
-start_server = websockets.serve(hello, "localhost", 8765)
+        await asyncio.sleep(1)
+        counter += 1
+        print(counter)
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+
+async def connect(websocket, path):
+    clients.add(websocket)
+    print("{} connected".format(websocket))
+    try:
+        await websocket.send("hello")
+        for message in websocket:
+            print(message)
+    # except:
+    #     pass
+    finally:
+        print("{} disconnected".format(websocket))
+        clients.remove(websocket)
+
+
+async def total():
+    await asyncio.wait([update(), websockets.serve(connect, "localhost", 8765)])
+
+asyncio.get_event_loop().run_until_complete(total())
+# loop = asyncio.get_event_loop()
+# loop.create_task(update())
+
+# loop.run_until_complete(websockets.serve(connect, "localhost", 8765))
+
+# loop.run_forever()
