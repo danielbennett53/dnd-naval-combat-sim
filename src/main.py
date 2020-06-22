@@ -1,20 +1,20 @@
 import math
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.exceptions import PreventUpdate
-import plotly.graph_objects as go
-import plotly.express as px
+# import dash
+# import dash_core_components as dcc
+# import dash_html_components as html
+# from dash.exceptions import PreventUpdate
+# import plotly.graph_objects as go
+# import plotly.express as px
 import numpy as np
 import random
 import datetime
 from Ship import Sprinter, Galleon
 
-from dash.dependencies import Input, Output, State, MATCH, ALL
-from flask_caching import Cache
+# from dash.dependencies import Input, Output, State, MATCH, ALL
+# from flask_caching import Cache
 
 random.seed()
-app = dash.Dash(__name__)
+# app = dash.Dash(__name__)
 
 starttime = datetime.datetime.now()
 
@@ -24,7 +24,7 @@ ships = {
     "C": {'ship': Sprinter([-20,75]), 'linecolor': "DarkCyan", 'fillcolor': 'LightCyan'},
     "D": {'ship': Sprinter([-50,-80]), 'linecolor': "Red", 'fillcolor': 'Pink'},
 }
-
+print(ships["A"]["ship"].get_ship())
 inputs = dict()
 
 fig = go.Figure(go.Scatter(

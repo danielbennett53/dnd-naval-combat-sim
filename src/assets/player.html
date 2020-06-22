@@ -10,39 +10,42 @@
 
 </head>
 
+<template id="ship-control-template">
+  <div class="row" style="border: solid darkgrey; background-color: lightblue; max-height: 400px">
+    <h5 style="text-align: center;">Nameless Ship</h5>
+    <div class="row" style="display: flex; align-items: center;">
+      <p style="text-align: center; flex: 1; max-width: 60px;">Full stop!</p>
+      <input type="range" style="flex: 4" min="-1.0" max="1.0" step="0.05" id="thrust" name="thrust" list="thrust-ticks">
+      <datalist id="thrust-ticks">
+        <option value="-1.0"></option>
+        <option value="0.0"></option>
+        <option value="1.0"></option>
+      </datalist>
+      <p style="text-align: center; flex: 1; max-width: 60px;">Full steam ahead!</p>
+    </div>
+    <div class="row" style="display: flex; align-items: center;">
+      <p style="text-align: center; flex: 1; max-width: 60px;">Hard to starboard!</p>
+      <input type="range" style="flex: 4" min="-1.0" max="1.0" step="0.05" id="steer" name="steer" list="steer-ticks">
+      <datalist id="steer-ticks">
+        <option value="-1.0"></option>
+        <option value="0.0"></option>
+        <option value="1.0"></option>
+      </datalist>
+      <p style="text-align: center; flex: 1; max-width: 60px;">Hard to port!</p>
+    </div>
+  </div>
+</template>
+
 <body>
   <script src="player.js"></script>
   <div class="row">
-    <div class="three columns" style="max-height: 100vh; overflow-y: auto;">
-      <div class="row" style="border: solid darkgrey; background-color: lightblue; max-height: 400px">
-        <h5 style="text-align: center;">Ship 1</h5>
-        <div class="row" style="display: flex; align-items: center;">
-          <p style="text-align: center; flex: 1; max-width: 60px;">Full stop!</p>
-          <input type="range" style="flex: 4" min="-1.0" max="1.0" step="0.05" id="thrust" name="thrust" list="thrust-ticks">
-          <datalist id="thrust-ticks">
-            <option value="-1.0"></option>
-            <option value="0.0"></option>
-            <option value="1.0"></option>
-          </datalist>
-          <p style="text-align: center; flex: 1; max-width: 60px;">Full steam ahead!</p>
-        </div>
-
-        <div class="row" style="display: flex; align-items: center;">
-          <p style="text-align: center; flex: 1; max-width: 60px;">Hard to starboard!</p>
-          <input type="range" style="flex: 4" min="-1.0" max="1.0" step="0.05" id="steer" name="steer" list="steer-ticks">
-          <datalist id="steer-ticks">
-            <option value="-1.0"></option>
-            <option value="0.0"></option>
-            <option value="1.0"></option>
-          </datalist>
-          <p style="text-align: center; flex: 1; max-width: 60px;">Hard to port!</p>
-        </div>
-      </div>
+    <div id="ship-control-div" class="three columns" style="max-height: 100vh; overflow-y: auto;">
+      <!-- Controls go here -->
     </div>
     <div class="nine columns" style="height: 95vh">
-      <svg viewBox="0 0 300 300" style="height: 100%; width: 100%"></svg>
+      <svg id="canvas" viewBox="0 0 300 300" style="height: 100%; width: 100%; border: solid black" xmlns="http://www.w3.org/2000/svg">
+      </svg>
     </div>
   </div>
-  <h1>Test</h1>
 </body>
 </html>
