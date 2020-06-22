@@ -9,8 +9,12 @@ def rotate(vec, theta_d):
     theta = math.radians(theta_d)
     rot_mat = np.matrix([[math.cos(theta), math.sin(theta)],
                          [-math.sin(theta), math.cos(theta)]])
-    return rot_mat * vec
+    return rot_mat * np.array(vec)
 
+
+def getTransformString(scale, translate, rotate):
+    return "translate({},{}) rotate({}) scale({},{})".format(
+        translate[0], translate[1], rotate, scale[0], scale[1])
 
 class Ship:
     step = 0.05
@@ -22,7 +26,7 @@ class Ship:
         self.rotation = 0
         self.turn_rate = 0
         self.accel = 0
-        self.start_time = datetime.datetime.now()
+        self.start_time = None
         self.plan = []
         self.paths = []
 
@@ -34,46 +38,46 @@ class Ship:
 
         # Define paths
         self.paths = {
-            "ship": {
+            self.name + ".ship": {
                 "d": "M -0.4,-0.5 C -0.45,-0.15 -0.5,0.0 -0.5,0.2 " + \
                      "S -0.25,0.4 0.0,0.5 C 0.25,0.4 0.5,0.4 0.5,0.2 " + \
                      "S 0.45,-0.15 0.4,-0.5 Z",
                 "stroke": self.stroke,
                 "fill": self.fill,
-                "transform": {"scale": [self.width, self.length],
-                              "translate": self.position.tolist(),
-                              "rotate": self.rotation
-                    }
+                "transform": getTransformString([self.width, self.length], self.position, self.rotation)
                 },
-            "plan": {
+            self.name + ".plan": {
                 "d": "",
                 "stroke": self.stroke,
-                "fill": self.fill,
-                "transform": {"scale": [1, 1],
-                            "translate": [0, 0],
-                            "rotate": 0}
-                },
+                "fill": "transparent",
+                "transform": getTransformString([1, 1], [0, 0], 0),
             }
+        }
 
     def set_motion(self, thrust=None, turn_rate=None):
-        if thrust is None:
-            self.accel = thrust * self.max_accel / 6
-        if turn_rate is None:
-            self.turn_rate = turn_rate * self.max_turn_rate / 6        
+        if thrust is not None:
+            self.accel = float(thrust) * self.max_accel / 6
+        if turn_rate is not None:
+            self.turn_rate = float(turn_rate) * self.max_turn_rate / 6
 
         self.plan = [(self.position, self.velocity, self.rotation)]
-        self.paths["plan"]["d"] = "M {},{} ".format(self.position[0], self.position[1])
+        self.paths[self.name + ".plan"]["d"] = "M {},{} ".format(self.position[0], self.position[1])
         for i in np.arange(Ship.step, 6, Ship.step):
-            direction = rotate([[0], [1]], self.rotation)
-            new_pos = self.plan[-1][0] + direction * Ship.step * self.velocity
-            new_vel = self.plan[-1][1] + self.accel * Ship.step
-            np.clip(new_vel, 0, self.max_vel)
-            new_rot = self.plan[-1][2] + self.turn_rate * Ship.step
-            self.plan.append((new_pos, new_vel, new_rot))
-            if i % 6 == 5:
-                self.paths["plan"]["d"] += "L {},{} ".format(self.plan[-1][0][0], self.plan[-1][0][1])
-            
-        self.paths["plan"]["d"] += "L {},{}".format(self.plan[-1][0][0], self.plan[-1][0][1])
+            pos = np.array(self.plan[-1][0])
+            vel = self.plan[-1][1]
+            rot = self.plan[-1][2]
+
+            direction = rotate([[0], [1]], rot)
+            new_pos = pos + direction.transpose() * Ship.step * vel
+            new_vel = vel + self.accel * Ship.step
+            new_vel = np.clip(new_vel, 0, self.max_vel)
+            new_rot = rot + self.turn_rate * Ship.step
+
+            self.plan.append((new_pos.tolist()[0], new_vel, new_rot))
+
+            if i % 0.25 == 0:
+                self.paths[self.name + ".plan"]["d"] += "L {},{} ".format(self.plan[-1][0][0], self.plan[-1][0][1])
+        self.paths[self.name + ".plan"]["d"] += "L {},{}".format(self.plan[-1][0][0], self.plan[-1][0][1])
 
 
     def start_movement(self, roll):
@@ -111,7 +115,11 @@ class Ship:
         self.velocity = self.plan[idx][1]
         self.rotation = self.plan[idx][2]
 
+        self.paths[self.name + '.ship']['transform'] = getTransformString([self.width, self.length], self.position, -self.rotation)
+
     def finished(self):
+        if self.start_time is None:
+            return True
         dt = (datetime.datetime.now() - self.start_time).total_seconds()
         if dt > 6:
             return True

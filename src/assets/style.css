@@ -368,3 +368,8 @@ there.
 .Select-input input {
   border: none;
 }
+
+path {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 2px;
+}

@@ -6,10 +6,8 @@ from Ship import Sprinter, Galleon
 clients = set()
 
 player_ships = {
-    "A": {'ship': Sprinter([200,200]), 'linecolor': "DarkGreen", 'fillcolor': 'LightGreen'},
-    "B": {'ship': Sprinter([20,40]), 'linecolor': "DarkBlue", 'fillcolor': 'LightBlue'},
-    "C": {'ship': Sprinter([20,75]), 'linecolor': "DarkCyan", 'fillcolor': 'LightCyan'},
-    "D": {'ship': Sprinter([50,150]), 'linecolor': "Red", 'fillcolor': 'Pink'},
+    "A": Sprinter("A", position=[200, 200], stroke="DarkGreen", fill="LightGreen"),
+    "B": Sprinter("B", position=[20,40], stroke="DarkBlue", fill="LightBlue"),
 }
 
 player_controls = {'type': 'modify-controls', 'controls': {}}
@@ -20,9 +18,15 @@ for s in player_ships.keys():
 
 async def update():
     while True:
+        for s in player_ships.values():
+            if not s.finished():
+                s.update()
         for c in clients:
             try:
-                pass
+                out = {"type": "paths", "paths": {}}
+                for v in player_ships.values():
+                    out["paths"] = {**out["paths"], **v.paths}
+                await c.send(json.dumps(out))
             except:
                 pass
 
@@ -30,36 +34,42 @@ async def update():
 
 
 async def syncInputs():
-    await asyncio.wait([c.send(json.dumps(player_inputs)) for c in clients])
+    global player_controls, clients
+    await asyncio.wait([c.send(json.dumps(player_controls)) for c in clients])
     for name, ship in player_ships.items():
-        ship.set_motion(player_inputs['controls'][name]['thrust'], 
-                        player_inputs['controls'][name]['steer'],
-                        20)
+        ship.set_motion(player_controls['controls'][name]['thrust'],
+                        player_controls['controls'][name]['steer'])
 
 
 async def connect(websocket, path):
+    global player_controls
     clients.add(websocket)
     try:
         out = {"type": "paths", "paths": {}}
         for v in player_ships.values():
-            out["paths"] = {**out["paths"], **v["ship"].paths}
+            out["paths"] = {**out["paths"], **v.paths}
         await websocket.send(json.dumps(out))
         out = {"type": "create-controls", "controls": []}
         for v in player_ships.values():
             out["controls"].append({
-                "name": v["ship"].name,
-                "fill": v["ship"].fill,
-                "stroke": v["ship"].stroke,
+                "name": v.name,
+                "fill": v.fill,
+                "stroke": v.stroke,
             })
         await websocket.send(json.dumps(out))
+        await syncInputs()
 
         async for message in websocket:
             msg = json.loads(message)
-            parts = msg['id'].split('.')
-            s = parts[0]
-            c = parts[1]
-            player_inputs['inputs'][s][c] = msg['value']
-            await syncInputs()
+            if msg['type'] == 'go':
+                for ship in player_ships.values():
+                    ship.start_movement(20)
+            else:
+                parts = msg['id'].split('.')
+                ship = parts[0]
+                control = parts[1]
+                player_controls['controls'][ship][control] = msg['value']
+                await syncInputs()
     # except:
     #     pass
     finally:

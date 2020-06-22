@@ -12,14 +12,6 @@ function resizeCanvas() {
     canvas.setAttribute("viewBox", "0 0 " + width.toString() + " " + height.toString());
 }
 
-
-function createPath(id, properties) {
-    let p = document.createElementNS("http://www.w3.org/2000/svg", 'path');    
-    p.id = id;
-    canvas.appendChild(p);
-    modifyPath(id, properties);
-}
-
 function modifyPaths(id, properties) {
     let p = document.getElementById(id);
     if (p == null) {
@@ -28,24 +20,18 @@ function modifyPaths(id, properties) {
         canvas.appendChild(p);
     }
     for (let prop in properties) {
-        if (prop == "transform") {
-            p.transform.scale = properties["transform"]["scale"];
-            p.transform.rotate = properties["transform"]["rotate"];
-            p.transform.translate = properties["transform"]["translate"];
-        } else {
-            p.setAttribute(prop, properties[prop]);
-        }
+        p.setAttribute(prop, properties[prop]);
     }
 }
 
 function sliderMove(event) {
-    const msg = {'type': 'input', 
+    const msg = {'type': 'control',
                  'id': event.target.id,
                  'value': event.target.value};
     socket.send(JSON.stringify(msg));
 }
 
-function addControls(name, stroke, fill) {
+function createControls(name, stroke, fill) {
     const temp = document.getElementById("ship-control-template");
     let c = temp.content.cloneNode(true);
     let divs = c.querySelectorAll("div");
@@ -58,12 +44,17 @@ function addControls(name, stroke, fill) {
     a[1].oninput = sliderMove;
     let title = c.querySelectorAll("h5")[0];
     title.textContent = name;
-    controls.appendChild(c); 
+    controls.appendChild(c);
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {
-    canvas = document.getElementById('canvas')
+    canvas = document.getElementById('canvas');
     controls = document.getElementById('ship-control-div');
+    button = document.getElementById('go-btn');
+    button.addEventListener("click", (event) => {
+        const msg = {'type': 'go'};
+        socket.send(JSON.stringify(msg));
+    })
     resizeCanvas();
 
     socket = new WebSocket("ws://" + location.hostname + ":8080");
@@ -77,15 +68,17 @@ document.addEventListener('DOMContentLoaded', (event) => {
             break;
 
             case "create-controls":
-                for (let s in msg.controls) {
-                    addControls(s.name, s.stroke, s.fill)
+                for (let s of msg.controls) {
+                    createControls(s.name, s.stroke, s.fill)
                 }
             break;
 
             case "modify-controls":
-                for (let ship in msg.inputs) {
-                    document.getElementById(ship + '.steer').setAttribute("value", msg.inputs[ship]['steer']);
-                    document.getElementById(ship + '.thrust').setAttribute("value", msg.inputs[ship]['thrust']);
+                for (let ship in msg.controls) {
+                    let st = document.getElementById(ship + '.steer');
+                    let th = document.getElementById(ship + '.thrust');
+                    st.value = msg.controls[ship]['steer'];
+                    th.value = msg.controls[ship]['thrust'];
                 }
             break;
 
