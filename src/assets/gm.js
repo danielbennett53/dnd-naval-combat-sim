@@ -1,9 +1,12 @@
-
 document.addEventListener('DOMContentLoaded', (event) => {
     canvas = document.getElementById('canvas');
     controls = document.getElementById('ship-control-div');
     button = document.getElementById('go-btn');
-    page_type = "player";
+    page_type = "gm";
+    button.addEventListener("click", () => {
+        const msg = {'type': 'go'};
+        socket.send(JSON.stringify(msg));
+    })
     resizeCanvas();
     createGrid();
 

@@ -2,7 +2,8 @@
 <head>
   <meta charset="utf-8">
 
-  <title>Player Ship Control</title>
+  <title>GM Ship Control</title>
+
   <link rel="stylesheet" href="style.css">
 
 </head>
@@ -45,16 +46,39 @@
   </div>
 </template>
 
+<template id="gm-control-template">
+  <div class="row margin" style="align-items: center; border: solid darkgrey; background-color: lightblue;">
+    <h5>Nameless Ship</h5>
+    <div class="row cntrl margin">
+      <label class="two columns" style="text-align: right; margin-right: 5px;">PosX-Y:</label>
+      <input class="two columns" type="number">
+      <input class="two columns" type="number">
+      <label class="two columns" style="text-align: right; margin-right: 5px;">Rot:</label>
+      <input class="two columns" type="number">
+    </div>
+    <div class="row cntrl" style="margin-bottom: 10px; flex-direction: column;">
+      <input type="checkbox" style="margin-right: 5px;" checked name="enable">
+      <label for="enable">Enable</label>
+      <input class="four columns" id="submit-btn" type="button" value="Submit" style="background-color: green; color: white;">
+    </div>
+</template>
+
 <body>
   <script src="base.js"></script>
-  <script src="player.js"></script>
+  <script src="gm.js"></script>
   <div class="row">
     <div id="ship-control-div" class="three columns" style="max-height: 100vh; overflow-y: auto;">
       <!-- Controls go here -->
     </div>
-    <div class="nine columns" style="height: 95vh">
-      <svg id="canvas" viewBox="0 0 300 300" style="height: 100%; width: 100%; border: solid black" xmlns="http://www.w3.org/2000/svg">
-      </svg>
+    <div class="nine columns" style="height: 90vh">
+      <div class="row">
+        <svg id="canvas" viewBox="0 0 300 300" style="height: 100%; width: 100%; border: solid black" xmlns="http://www.w3.org/2000/svg">
+        </svg>
+      </div>
+      <div>
+        <input id="go-btn" type="button" value="Start" style="width: 100%; background-color: green; color: white;">
+        <input id="undo-btn" type="button" value="Undo" style="width: 100%; background-color: red; color: white;">
+      </div>
     </div>
   </div>
 </body>

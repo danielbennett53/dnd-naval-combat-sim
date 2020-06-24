@@ -44,13 +44,15 @@ class Ship:
                      "S 0.45,-0.15 0.4,-0.5 Z",
                 "stroke": self.stroke,
                 "fill": self.fill,
-                "transform": getTransformString([self.width, self.length], self.position, self.rotation)
+                "transform": getTransformString([self.width, self.length], self.position, self.rotation),
+                "stroke-width": 2,
                 },
             self.name + ".plan": {
                 "d": "",
                 "stroke": self.stroke,
                 "fill": "transparent",
                 "transform": getTransformString([1, 1], [0, 0], 0),
+                "stroke-width": 3,
             }
         }
 
@@ -81,10 +83,11 @@ class Ship:
 
 
     def start_movement(self, roll):
+        roll = float(roll)
         self.start_time = datetime.datetime.now()
         # Add random noise if roll is less than DC
         if roll < self.nav_DC:
-            err = (self.nav_DC - roll) * 1.25 / self.nav_DC
+            err = (self.nav_DC - roll) * 0.75 / self.nav_DC
             tr_err = err * self.max_turn_rate / 6
             a_err = err * self.max_accel / 6
             tr_err_high = np.clip(self.turn_rate + tr_err, -self.max_turn_rate, self.max_turn_rate)
@@ -126,28 +129,35 @@ class Ship:
         else:
             return False
 
+    def get_ac(self):
+        ac = int(self.AC[0] + (self.AC[1] - self.AC[0]) * self.velocity / self.max_vel)
+        return ac
+
+
 
 class Sprinter(Ship):
     def __init__(self, name, **kwargs):
-        self.max_vel = 80
-        self.max_turn_rate = 60
-        self.max_accel = 30
+        self.max_vel = 60
+        self.max_turn_rate = 120
+        self.max_accel = 20
         self.firing_arc = [(-180, 180)]
         self.firing_range = 160
         self.width = 10
         self.length = 30
         self.nav_DC = 12
+        self.AC = [10, 18]
         Ship.__init__(self, name, **kwargs)
 
 
 class Galleon(Ship):
     def __init__(self, name, **kwargs):
-        self.max_vel = 50
-        self.max_turn_rate = 30
-        self.max_accel = 15
+        self.max_vel = 40
+        self.max_turn_rate = 60
+        self.max_accel = 10
         self.firing_arc = [(-140, -40), (40, 140)]
         self.firing_range = [300, 300]
         self.width = 20
         self.length = 70
         self.nav_DC = 15
+        self.AC = [8, 14]
         Ship.__init__(self, name, **kwargs)
