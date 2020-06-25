@@ -5,21 +5,17 @@ from Ship import Sprinter, Galleon
 
 clients = set()
 
-player_ships = {
-    "Green": Sprinter("Green", position=[200, 200], stroke="DarkGreen", fill="LightGreen"),
-    "Blue": Sprinter("Blue", position=[20,40], stroke="DarkBlue", fill="LightBlue"),
-    "Violet": Sprinter("Violet", position=[400, 50], stroke="DarkViolet", fill="Violet"),
+ships = {
+    "Green": Sprinter("Green", position=[200, 200], stroke="DarkGreen", fill="LightGreen", type="player"),
+    "Blue": Sprinter("Blue", position=[20,40], stroke="DarkBlue", fill="LightBlue", type="player"),
+    "Violet": Sprinter("Violet", position=[400, 50], stroke="DarkViolet", fill="Violet", type="player"),
+    "Red": Galleon("Red", position=[500, 500], rotation=180, stroke="Red", fill="Pink", type="enemy"),
 }
-
-enemy_ships = {
-    "Red": Galleon("Red", position=[500, 500], rotation=180, stroke="Red", fill="Pink"),
-}
-
-all_ships = {**player_ships, **enemy_ships}
 
 controls = {'type': 'modify-controls', 'controls': {}}
+disabled_ships = set()
 
-for s in all_ships.keys():
+for s in ships.keys():
     controls['controls'][s] = {'thrust': 0, 'steer': 0, 'roll': 0}
 
 in_progress = False
@@ -28,27 +24,27 @@ in_progress = False
 async def syncInputs():
     global clients
     await asyncio.wait([c.send(json.dumps(controls)) for c in clients])
-    for name, ship in all_ships.items():
+    for name, ship in ships.items():
         ship.set_motion(controls['controls'][name]['thrust'],
                         controls['controls'][name]['steer'])
 
 
 async def update():
-    global in_progress, all_ships, clients
+    global in_progress, ships, clients
     while True:
-        for s in all_ships.values():
+        for s in ships.values():
             if not s.finished():
                 in_progress = True
                 s.update()
-        if all([s.finished for s in all_ships.values()]) and in_progress:
+        if all([s.finished for s in ships.values()]) and in_progress:
             in_progress = False
-            for s in all_ships.keys():
+            for s in ships.keys():
                 controls['controls'][s] = {'thrust': 0, 'steer': 0, 'roll': 0}
         temp_clients = set(clients)
         for c in temp_clients:
             try:
                 out = {"type": "state", "paths": {}, "status": {}}
-                for v in all_ships.values():
+                for v in ships.values():
                     out["paths"] = {**out["paths"], **v.paths}
                     out["status"][v.name] = {"ac": v.get_ac(), "speed": int(v.velocity)}
                 await c.send(json.dumps(out))
@@ -62,22 +58,17 @@ async def connect(websocket, path):
     global clients
     clients.add(websocket)
     try:
-        out = {"type": "create-controls", "enemies": [], "players": []}
-        for v in player_ships.values():
-            out["players"].append({
+        out = {"type": "create-controls", "ships": []}
+        for v in ships.values():
+            out["ships"].append({
                 "name": v.name,
                 "fill": v.fill,
                 "stroke": v.stroke,
-            })
-        for v in enemy_ships.values():
-            out["enemies"].append({
-                "name": v.name,
-                "fill": v.fill,
-                "stroke": v.stroke,
+                "type": v.type,
             })
         await websocket.send(json.dumps(out))
         out = {"type": "state", "paths": {}, "status": {}}
-        for v in all_ships.values():
+        for v in ships.values():
             out["paths"] = {**out["paths"], **v.paths}
             out["status"][v.name] = {"ac": v.get_ac(), "speed": int(v.velocity)}
 
@@ -87,22 +78,27 @@ async def connect(websocket, path):
         async for message in websocket:
             msg = json.loads(message)
             if msg['type'] == 'go':
-                for name, ship in player_ships.items():
+                for name, ship in ships.items():
                     ship.start_movement(controls['controls'][name]['roll'])
-                for name, ship in enemy_ships.items():
-                    ship.start_movement(controls['controls'][name]['roll'])
+            elif msg['type'] == 'override':
+                ship = msg['ship']
+                if msg['pos'][0] != '':
+                    ships[ship].position[0] = float(msg['pos'][0])
+                if msg['pos'][1] != '':
+                    ships[ship].position[1] = float(msg['pos'][1])
+                if msg['rot'] != '':
+                    ships[ship].rotation = float(msg['rot'])
+                if bool(msg['enabled']) and ship in disabled_ships:
+                    disabled_ships.remove(ship)
+                elif not bool(msg['enabled']):
+                    disabled_ships.add(ship)
+                ships[ship].update()
+            elif msg['type'] == 'control':
+                if ships[msg['ship']].finished() and msg['ship'] not in disabled_ships:
+                    controls['controls'][msg['ship']][msg['control']] = msg['value']
+                    await syncInputs()
             else:
-                parts = msg['id'].split('.')
-                ship = parts[0]
-                control = parts[1]
-                if msg['type'] == 'player':
-                    if player_ships[ship].finished():
-                        controls['controls'][ship][control] = msg['value']
-                        await syncInputs()
-                else:
-                    if enemy_ships[ship].finished():
-                        controls['controls'][ship][control] = msg['value']
-                        await syncInputs()
+                pass
     # except:
     #     pass
     finally:
@@ -110,10 +106,6 @@ async def connect(websocket, path):
         clients.remove(websocket)
 
 
-# async def total():
-#     await asyncio.wait([update(), websockets.serve(connect, "localhost", 8765)])
-
-# asyncio.get_event_loop().run_until_complete(total())
 loop = asyncio.get_event_loop()
 loop.create_task(update())
 

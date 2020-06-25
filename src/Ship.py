@@ -101,22 +101,21 @@ class Ship:
 
 
     def update(self):
-        if not self.plan:
-            return
+        if self.plan and self.start_time is not None:
 
-        dt = (datetime.datetime.now() - self.start_time).total_seconds()
+            dt = (datetime.datetime.now() - self.start_time).total_seconds()
 
-        if dt >= 6:
-            self.position = self.plan[-1][0]
-            self.velocity = self.plan[-1][1]
-            self.rotation = self.plan[-1][2]
-            self.plan = []
-            return
+            if dt >= 6:
+                self.position = self.plan[-1][0]
+                self.velocity = self.plan[-1][1]
+                self.rotation = self.plan[-1][2]
+                self.plan = []
+                return
 
-        idx = round(dt * (len(self.plan) - 1) / 6)
-        self.position = self.plan[idx][0]
-        self.velocity = self.plan[idx][1]
-        self.rotation = self.plan[idx][2]
+            idx = round(dt * (len(self.plan) - 1) / 6)
+            self.position = self.plan[idx][0]
+            self.velocity = self.plan[idx][1]
+            self.rotation = self.plan[idx][2]
 
         self.paths[self.name + '.ship']['transform'] = getTransformString([self.width, self.length], self.position, -self.rotation)
 

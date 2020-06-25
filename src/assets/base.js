@@ -34,19 +34,23 @@ function drawGridLine(start, end) {
 }
 
 function controlChange(event) {
-    const msg = {'type': page_type,
-                 'id': event.target.id,
+    let ship = event.target.id.split('.')[0];
+    let control = event.target.id.split('.')[1];
+    const msg = {'type': 'control',
+                 'page': page_type,
+                 'ship': ship,
+                 'control': control,
                  'value': event.target.value};
     socket.send(JSON.stringify(msg));
 }
 
 
 function sendOverride(event) {
-    name = event.target.id.split('.')[0];
-    posX = document.getElementById(name + '.posX');
-    posY = document.getElementById(name + '.posY');
-    rot = document.getElementById(name + '.rot');
-    enabled = document.getElementById(name + '.enable');
+    let name = event.target.id.split('.')[0];
+    let posX = document.getElementById(name + '.posX').value;
+    let posY = document.getElementById(name + '.posY').value;
+    let rot = document.getElementById(name + '.rot').value;
+    let enabled = document.getElementById(name + '.enable').checked;
     const msg = {
         'type': 'override',
         'ship': name,
@@ -132,14 +136,16 @@ function wsHandler(event) {
 
         case "create-controls":
             if (page_type == "player") {
-                for (let s of msg.players) {
-                    createControls(s.name, s.stroke, s.fill);
+                for (let s of msg.ships) {
+                    if (s.type == "player") {
+                        createControls(s.name, s.stroke, s.fill);
+                    }
                 }
             } else if (page_type == "gm") {
-                for (let s of msg.enemies) {
-                    createControls(s.name, s.stroke, s.fill);
-                }
-                for (let s of msg.players) {
+                for (let s of msg.ships) {
+                    if (s.type == "enemy") {
+                        createControls(s.name, s.stroke, s.fill);
+                    }
                     createGMControls(s.name, s.stroke, s.fill);
                 }
             } else {
