@@ -2,6 +2,7 @@ import asyncio
 import json
 import websockets
 from Ship import Sprinter, Galleon
+from Obstacle import Obstacle
 
 clients = set()
 
@@ -12,6 +13,14 @@ ships = {
     "Red": Galleon("Red", position=[500, 500], rotation=180, stroke="Red", fill="Pink", type="enemy"),
 }
 
+ops = [
+    [150,500],
+    [500, 200],
+    [100, 50],
+]
+
+obs = [Obstacle(position=o) for o in ops]
+
 controls = {'type': 'modify-controls', 'controls': {}}
 disabled_ships = set()
 
@@ -19,7 +28,6 @@ for s in ships.keys():
     controls['controls'][s] = {'thrust': 0, 'steer': 0, 'roll': 0}
 
 in_progress = False
-
 
 async def syncInputs():
     global clients
@@ -33,7 +41,7 @@ async def update():
     global in_progress, ships, clients
     while True:
         for s in ships.values():
-            if not s.finished():
+            if not s.finished() and not s.name in disabled_ships:
                 in_progress = True
                 s.update()
         if all([s.finished for s in ships.values()]) and in_progress:
@@ -46,9 +54,11 @@ async def update():
                 out = {"type": "state", "paths": {}, "status": {}}
                 for v in ships.values():
                     out["paths"] = {**out["paths"], **v.paths}
-                    out["status"][v.name] = {"ac": v.get_ac(), "speed": int(v.velocity)}
+                    out["status"][v.name] = {"ac": v.get_ac(), "speed": int(v.velocity), "dc": int(v.dc)}
                 await c.send(json.dumps(out))
-            except:
+            # except:
+            #     pass
+            finally:
                 pass
 
         await asyncio.sleep(0.05)
@@ -71,6 +81,10 @@ async def connect(websocket, path):
         for v in ships.values():
             out["paths"] = {**out["paths"], **v.paths}
             out["status"][v.name] = {"ac": v.get_ac(), "speed": int(v.velocity)}
+        i = 0
+        for o in obs:
+            out["paths"]["obs" + str(i)] = {**o.path}
+            i += 1
 
         await websocket.send(json.dumps(out))
         await syncInputs()
@@ -93,6 +107,8 @@ async def connect(websocket, path):
                 elif not bool(msg['enabled']):
                     disabled_ships.add(ship)
                 ships[ship].update()
+                ships[ship].plan = []
+                ships[ship].paths[ship + ".plan"]["d"] = ""
             elif msg['type'] == 'control':
                 if ships[msg['ship']].finished() and msg['ship'] not in disabled_ships:
                     controls['controls'][msg['ship']][msg['control']] = msg['value']

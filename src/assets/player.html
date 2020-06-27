@@ -35,12 +35,18 @@
       <input class="three columns" type="number">
     </div>
     <div class="row cntrl" style="margin-top: 10px;">
-      <label class="six columns" style="text-align: center">Current AC</label>
-      <label class="six columns" style="text-align: center">Current Speed</label>
+      <label class="four columns" style="text-align: center">Current AC</label>
+      <label class="four columns" style="text-align: center">Current Speed</label>
+      <label class="four columns" style="text-align: center">Maneuver DC</label>
     </div>
     <div class="row cntrl" style="margin-bottom: 10px;">
-      <label class="six columns" style="text-align: center" id="ac">0</label>
-      <label class="six columns" style="text-align: center" id="speed">0</label>
+      <label class="four columns" style="text-align: center" id="ac">0</label>
+      <label class="four columns" style="text-align: center" id="speed">0</label>
+      <label class="four columns" style="text-align: center" id="dc">0</label>
+    </div>
+    <div class="row cntrl margin">
+      <input class="one columns" type="checkbox" name="show-weapons">
+        <label class="six columns" for="show-weapons" style="font-size: large; color: black;">Show Weapon Range</label>
     </div>
   </div>
 </template>
@@ -51,6 +57,10 @@
   <div class="row">
     <div id="ship-control-div" class="three columns" style="max-height: 100vh; overflow-y: auto;">
       <!-- Controls go here -->
+      <div class="row cntrl margin" style="background-color: lightgrey; border: solid black;">
+        <input class="one columns" type="checkbox" id="show-enemy-weapons" name="show-enemy-weapons">
+          <label class="nine columns" for="show-enemy-weapons" style="font-size: large; color: black;">Show Enemy Weapon Range</label>
+      </div>
     </div>
     <div class="nine columns" style="height: 95vh">
       <svg id="canvas" viewBox="0 0 300 300" style="height: 100%; width: 100%; border: solid black" xmlns="http://www.w3.org/2000/svg">

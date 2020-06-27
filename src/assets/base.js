@@ -2,6 +2,7 @@ var canvas;
 var socket;
 var controls;
 var page_type;
+var clicked_ship = null;
 
 function resizeCanvas() {
     let canvas_h = canvas.clientHeight;
@@ -13,11 +14,18 @@ function resizeCanvas() {
     canvas.setAttribute("viewBox", "0 0 " + width.toString() + " " + height.toString());
 }
 
+function clickShip(event) {
+    clicked_ship = event.target.id;
+}
+
 function modifyPaths(id, properties) {
     let p = document.getElementById(id);
     if (p == null) {
         p = document.createElementNS("http://www.w3.org/2000/svg", 'path');
         p.id = id;
+        if (id.includes("ship")) {
+            p.onmousedown = clickShip;
+        }
         canvas.appendChild(p);
     }
     for (let prop in properties) {
@@ -62,6 +70,21 @@ function sendOverride(event) {
 }
 
 
+function showHideWeapons(event) {
+    let name = event.target.id.split('.')[0];
+    const paths = document.querySelectorAll("path");
+    for (let p of paths) {
+        if (p.id.includes('weapon') && p.id.includes(name)) {
+            if (event.target.checked) {
+                p.style.visibility = 'visible';
+            } else {
+                p.style.visibility = 'hidden';
+            }
+        }
+    }
+}
+
+
 function createControls(name, stroke, fill) {
     const temp = document.getElementById("ship-control-template");
     let c = temp.content.cloneNode(true);
@@ -72,15 +95,19 @@ function createControls(name, stroke, fill) {
     a[0].id = name + ".thrust";
     a[1].id = name + ".steer";
     a[2].id = name + ".roll";
+    a[3].id = name + ".weapons";
     a[0].oninput = controlChange;
     a[1].oninput = controlChange;
     a[2].oninput = controlChange;
+    a[3].onclick = showHideWeapons;
     let title = c.querySelectorAll("h5")[0];
     title.textContent = name;
     let ac = c.getElementById("ac");
     let speed = c.getElementById("speed");
+    let dc = c.getElementById("dc");
     ac.id = name + ".ac";
     speed.id = name + ".speed";
+    dc.id = name + ".dc";
     controls.appendChild(c);
 }
 
@@ -127,9 +154,11 @@ function wsHandler(event) {
             for (let s in msg.status) {
                 let ac = document.getElementById(s + '.ac');
                 let speed = document.getElementById(s + '.speed');
+                let dc = document.getElementById(s + '.dc');
                 if ((ac != null) && (speed != null)) {
                     ac.textContent = msg.status[s]['ac'];
                     speed.textContent = msg.status[s]['speed'];
+                    dc.textContent = msg.status[s]['dc'];
                 }
             }
         break;
