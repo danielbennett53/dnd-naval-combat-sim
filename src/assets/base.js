@@ -8,7 +8,7 @@ function resizeCanvas() {
     let canvas_h = canvas.clientHeight;
     let canvas_w = canvas.clientWidth;
 
-    let width = 900;
+    let width = 1660;
     let height = width * canvas_h / canvas_w;
 
     canvas.setAttribute("viewBox", "0 0 " + width.toString() + " " + height.toString());
@@ -16,6 +16,7 @@ function resizeCanvas() {
 
 function clickShip(event) {
     clicked_ship = event.target.id;
+    console.log(clicked_ship);
 }
 
 function modifyPaths(id, properties) {

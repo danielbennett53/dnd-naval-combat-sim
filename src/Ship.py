@@ -14,7 +14,7 @@ def rotate(vec, theta_d):
 
 def getTransformString(scale, translate, rotate):
     return "translate({},{}) rotate({}) scale({},{})".format(
-        translate[0], translate[1], rotate, scale[0], scale[1])
+        translate[0], translate[1], -rotate, scale[0], scale[1])
 
 class Ship:
     step = 0.05
@@ -69,7 +69,7 @@ class Ship:
                     "stroke": self.stroke,
                     "fill": self.fill,
                     "opacity": 0.5,
-                    "transform": getTransformString([1, 1], self.position, 0),
+                    "transform": getTransformString([1, 1], self.position, self.rotation),
                     "stroke-width": 0,
                     "visibility": "hidden",
                 }
@@ -105,25 +105,31 @@ class Ship:
                 self.paths[self.name + ".plan"]["d"] += "L {},{} ".format(self.plan[-1][0][0], self.plan[-1][0][1])
         self.paths[self.name + ".plan"]["d"] += "L {},{}".format(self.plan[-1][0][0], self.plan[-1][0][1])
         dc_range = self.max_dc - self.min_dc
-        self.dc = self.min_dc + (self.velocity / self.max_vel) * \
-                  (abs(turn_rate) * dc_range / 2 + abs(thrust) * dc_range / 2)
+        self.dc = int(self.min_dc + (self.velocity / self.max_vel) * \
+                  (abs(turn_rate) * dc_range / 2 + abs(thrust) * dc_range / 2))
 
 
     def start_movement(self, roll):
         roll = float(roll)
         self.start_time = datetime.datetime.now()
-        # Add random noise if roll is less than DC
-        if roll < self.dc:
-            err = (self.dc - roll) * 0.75 / self.dc
-            tr_err = err * self.max_turn_rate / 6
-            a_err = err * self.max_accel / 6
-            tr_err_high = np.clip(self.turn_rate + tr_err, -self.max_turn_rate, self.max_turn_rate)
-            tr_err_low = np.clip(self.turn_rate - tr_err, -self.max_turn_rate, self.max_turn_rate)
-            self.turn_rate = random.uniform(tr_err_low, tr_err_high)
-            a_err_high = np.clip(self.accel + a_err, -self.max_accel, self.max_accel)
-            a_err_low = np.clip(self.accel - a_err, -self.max_accel, self.max_accel)
-            self.accel = random.uniform(a_err_low, a_err_high)
 
+        if roll < self.dc:
+            scale = roll / self.dc
+            # if commands are low enough, wander about neutral
+            if abs(self.accel * 6 / self.max_accel) < 0.1:
+                a_range = [-0.1 * self.max_accel / 6, 0.1 * self.max_accel / 6]
+                self.accel = random.uniform(a_range[0], a_range[1])
+            else:
+                a_range = [-0.4 * self.accel, self.accel]
+                a_range = sorted(a_range)
+                self.accel = a_range[0] + (a_range[1] - a_range[0]) * scale
+            if abs(self.turn_rate * 6 / self.max_turn_rate) < 0.1:
+                tr_range = [-0.1 * self.max_turn_rate / 6, 0.1 * self.max_turn_rate / 6]
+                self.turn_rate = random.uniform(tr_range[0], tr_range[1])
+            else:
+                tr_range = [-0.4 * self.turn_rate, self.turn_rate]
+                tr_range = sorted(tr_range)
+                self.turn_rate = tr_range[0] + (tr_range[1] - tr_range[0]) * scale
         self.set_motion()
 
 
@@ -145,11 +151,11 @@ class Ship:
             self.rotation = self.plan[idx][2]
 
 
-        self.paths[self.name + '.ship']['transform'] = getTransformString([self.width, self.length], self.position, -self.rotation)
+        self.paths[self.name + '.ship']['transform'] = getTransformString([self.width, self.length], self.position, self.rotation)
 
         for p in self.paths.keys():
             if 'weapons' in p:
-                self.paths[p]['transform'] = getTransformString([1, 1], self.position, -self.rotation)
+                self.paths[p]['transform'] = getTransformString([1, 1], self.position, self.rotation)
 
     def finished(self):
         if self.start_time is None:
@@ -169,10 +175,10 @@ class Ship:
 class Sprinter(Ship):
     def __init__(self, name, **kwargs):
         self.max_vel = 60
-        self.max_turn_rate = 120
+        self.max_turn_rate = 90
         self.max_accel = 20
         self.firing_arc = [(0, 180), (-180, 0)]
-        self.firing_range = [160]
+        self.firing_range = [200]
         self.width = 10
         self.length = 30
         self.min_dc = 8
@@ -183,11 +189,11 @@ class Sprinter(Ship):
 
 class Galleon(Ship):
     def __init__(self, name, **kwargs):
-        self.max_vel = 40
+        self.max_vel = 45
         self.max_turn_rate = 60
-        self.max_accel = 10
-        self.firing_arc = [(-140, -40), (40, 140)]
-        self.firing_range = [300, 600]
+        self.max_accel = 15
+        self.firing_arc = [(-130, -50), (50, 130)]
+        self.firing_range = [250, 500]
         self.width = 20
         self.length = 70
         self.min_dc = 8

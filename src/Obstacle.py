@@ -3,9 +3,9 @@ import math
 
 random.seed()
 
-radius_lims = [10, 70]
+radius_lims = [20, 70]
 vertex_lims = [5, 10]
-angle_err = 0.8
+angle_err = 0.9
 
 def getTransformString(scale, translate, rotate):
     return "translate({},{}) rotate({}) scale({},{})".format(

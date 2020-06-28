@@ -6,20 +6,39 @@ from Obstacle import Obstacle
 
 clients = set()
 
+w = 1600
+l = 800
+mgn = 30
+boundary = {
+    "d": "M {},{} A {},{},{},{},{},{},{} L {},{} A {},{},{},{},{},{},{} Z".format(
+        l/2 + mgn, mgn, l/2, l/2, 0, 0, 0, l/2 + mgn, mgn + l, w + mgn - l/2, mgn + l,
+        l/2, l/2, 0, 0, 0, w + mgn - l/2, mgn),
+    "stroke": "Black",
+    "fill": "transparent",
+    "stroke-width": 4,
+}
+
 ships = {
-    "Green": Sprinter("Green", position=[200, 200], stroke="DarkGreen", fill="LightGreen", type="player"),
-    "Blue": Sprinter("Blue", position=[20,40], stroke="DarkBlue", fill="LightBlue", type="player"),
-    "Violet": Sprinter("Violet", position=[400, 50], stroke="DarkViolet", fill="Violet", type="player"),
-    "Red": Galleon("Red", position=[500, 500], rotation=180, stroke="Red", fill="Pink", type="enemy"),
+    "Green": Sprinter("Green", position=[150, 230], rotation=45, stroke="DarkGreen", fill="LightGreen", type="player", firing_range=[800]),
+    "Blue": Sprinter("Blue", position=[100,430], rotation=90, stroke="DarkBlue", fill="LightBlue", type="player", firing_range=[100], firing_arc=[(-140, -40), (40, 140)]),
+    "Violet": Sprinter("Violet", position=[150, 630], rotation=135, stroke="DarkViolet", fill="Violet", type="player", firing_range=[20], firing_arc=[(-30, 30)]),
+    "Red": Galleon("Red", position=[1500, 430], rotation=180, stroke="Red", fill="Pink", type="enemy"),
 }
 
 ops = [
-    [150,500],
-    [500, 200],
-    [100, 50],
+    { "position": [300, 430], "rx": 40, "ry": 60},
+    { "position": [800, 130], "rx": 150, "ry": 20, "rotation": 0 },
+    { "position": [650, 430], "rx": 40, "ry": 150, "rotation": 0 },
+    { "position": [950, 430], "rx": 40, "ry": 150, "rotation": 0 },
+    { "position": [800, 730], "rx": 150, "ry": 20, "rotation": 0 },
+    { "position": [475, 600], "rx": 30, "ry": 60},
+    { "position": [475, 260], "rx": 60, "ry": 30},
+    { "position": [1185, 600], "rx": 50, "ry": 30},
+    { "position": [1185, 260], "rx": 50, "ry": 80},
+    { "position": [1360, 430], "rx": 40, "ry": 60},
 ]
 
-obs = [Obstacle(position=o) for o in ops]
+obs = [Obstacle(**o) for o in ops]
 
 controls = {'type': 'modify-controls', 'controls': {}}
 disabled_ships = set()
@@ -77,14 +96,18 @@ async def connect(websocket, path):
                 "type": v.type,
             })
         await websocket.send(json.dumps(out))
+
+
         out = {"type": "state", "paths": {}, "status": {}}
-        for v in ships.values():
-            out["paths"] = {**out["paths"], **v.paths}
-            out["status"][v.name] = {"ac": v.get_ac(), "speed": int(v.velocity)}
         i = 0
         for o in obs:
             out["paths"]["obs" + str(i)] = {**o.path}
             i += 1
+        out["paths"]["boundary"] = {**boundary}
+        for v in ships.values():
+            out["paths"] = {**out["paths"], **v.paths}
+            out["status"][v.name] = {"ac": v.get_ac(), "speed": int(v.velocity)}
+
 
         await websocket.send(json.dumps(out))
         await syncInputs()
@@ -106,9 +129,10 @@ async def connect(websocket, path):
                     disabled_ships.remove(ship)
                 elif not bool(msg['enabled']):
                     disabled_ships.add(ship)
-                ships[ship].update()
+                ships[ship].velocity = 0
                 ships[ship].plan = []
                 ships[ship].paths[ship + ".plan"]["d"] = ""
+                ships[ship].update()
             elif msg['type'] == 'control':
                 if ships[msg['ship']].finished() and msg['ship'] not in disabled_ships:
                     controls['controls'][msg['ship']][msg['control']] = msg['value']
@@ -120,6 +144,7 @@ async def connect(websocket, path):
     finally:
         print("{} disconnected".format(websocket))
         clients.remove(websocket)
+
 
 
 loop = asyncio.get_event_loop()
